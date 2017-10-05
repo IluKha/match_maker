@@ -1,0 +1,6 @@
+west
+north
+east
+south
+dima
+fedya
