@@ -1,12 +1,6 @@
 import requests
 import config
 from time import sleep
-#dict1 = [{'message': {'message_id': '123', 'text': 'rth'}, 'from': {'id': '12', 'name':{'first_name':'fedya','last_name':'pidor'}}}]
-#print(type(dict1))
-#dict1 = dict(dict1[0])
-#print(dict1)
-#print(dict1['from']['name']['first_name'])
-#print(type(dict1))
 
 
 def check_last_update_id(data):
@@ -27,38 +21,58 @@ def get_id(info):
 
 
 def get_updates(param, request, timeout):
-    params = {'offset': param , 'timeout': timeout}
+    params = {'offset': param, 'timeout': timeout}
     response = requests.get(request + 'getUpdates', data=params)
     return response.json()
 
 
-def examine_content():
-    boolean_status = None
-    last_up = 0
-    while boolean_status:
-        length = send_request_to_log()['result']
-        if len(length) == 0:
-            boolean_status = True
+def start_examine_content():
+    buffer_list = []
+    while len(buffer_list) == 0:
+        buffer_list = send_request_to_log()['result']
+        sleep(config.sleep_time)
+    return send_request_to_log()
 
-        elif len(length) != 0:
-            boolean_status = False
-            last_up = check_last_update_id(send_request_to_log())['update_id']
-    return last_up
+
+def type_of_update(mess_from_user, mess):
+    if mess_from_user[4] == 'text' and mess['message']['chat']['id'] > 0:
+        person_id = mess['message']['from']['id']
+        send_mess_toperson(person_id)
+    elif mess_from_user[4] == 'new_chat_participant' and mess['message']['new_chat_participant']['id'] == 467092924:
+        chat_id = mess['message']['chat']['id']
+        send_mess_togroup(chat_id)
+    else:
+        pass
+
+
+def send_mess_toperson(person_id ):
+    params = {'chat_id': person_id, 'text': 'Привет мне ,короче , нужны твои ФИО , а еще паспортные данные хочу оформить мелкий займ , но ты не бойся ты будешь в плюсе'}
+    response = requests.post(config.url + 'sendMessage', data=params)
+    return response
+
+
+def send_mess_togroup(chat_id):
+    params = {'chat_id': chat_id, 'text': 'Хей, я бот ,который будет отвечать за праздники и напоминать о них , если ты ,сволочь ,о них забудешь . Добавь меня в личку. with Love @HOOliganJimmybot))'}
+    response = requests.post(config.url + 'sendMessage', data=params)
+    return response
 
 
 def main():
-    #up_id = examine_content()
+    up_id = check_last_update_id(start_examine_content())['update_id']
 
-    up_id = check_last_update_id(send_request_to_log())['update_id']
     while True:
-        sended = get_updates(up_id, config.url, timeout=20)['result']
-        if len(sended) == 0:
+        mess_from_user = get_updates(up_id, config.url, timeout=4)['result']
+        if len(mess_from_user) == 0:
             pass
         else:
-            print(sended[0])
+            mess = mess_from_user[0]
+            print(mess_from_user[0])
+            mess_from_user = list(mess_from_user[0]['message'])
+            type_of_update(mess_from_user, mess)
+            print(mess_from_user)
             up_id += 1
-        sleep(0)
+        sleep(config.sleep_time)
 
 
 if __name__ == '__main__':
-     main()
+    main()
